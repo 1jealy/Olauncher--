@@ -57,6 +57,18 @@
             android:visibility="gone"
             tools:text="Clear 12°"
             tools:visibility="visible" />
+
+        <TextView
+            android:id="@+id/dday"
+            style="@style/TextDefault"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:paddingHorizontal="2dp"
+            android:textSize="@dimen/date_size"
+            android:visibility="gone"
+            tools:text="Exam D-12"
+            tools:visibility="visible" />
     </LinearLayout>
 
     <!-- Home apps-->

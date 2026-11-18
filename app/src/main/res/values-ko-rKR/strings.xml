@@ -28,7 +28,7 @@
     <string name="clock_click_app">시계 클릭 시 실행 앱</string>
     <string name="date_click_app">날짜 클릭 시 실행 앱</string>
     <string name="double_tap">Double Tap</string>
-    <string name="save">Save</string>
+    <string name="save">저장</string>
     <string name="app_drawer_tips">팁: 아래로 스와이프 하면 무시할 수 있고, 키보드를 숨기려면 스크롤 하세요.</string>
     <string name="okay">네</string>
     <string name="triple_tap_lock_message">어떻게 작동하나요?:
@@ -106,4 +106,8 @@
     <string name="weather_rain">비</string>
     <string name="weather_snow">눈</string>
     <string name="weather_thunderstorm">뇌우</string>
+    <string name="dday">디데이</string>
+    <string name="dday_title">디데이 이름</string>
+    <string name="dday_title_hint">예: 수능 (선택)</string>
+    <string name="dday_remove">끄기</string>
 </resources>

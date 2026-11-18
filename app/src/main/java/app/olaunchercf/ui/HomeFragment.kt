@@ -2,7 +2,10 @@ package app.olaunchercf.ui
 
 import android.annotation.SuppressLint
 import android.app.admin.DevicePolicyManager
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.os.Vibrator
@@ -44,6 +47,13 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
     private var weatherLoading = false
 
+    // refreshes the D-day when the date changes while the home screen is open
+    private val dateChangeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (_binding != null) updateDday()
+        }
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
 
@@ -82,7 +92,27 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         binding.clock.textSize = prefs.textSize * 2.5f
         binding.date.textSize = prefs.textSize.toFloat()
         binding.weather.textSize = prefs.textSize.toFloat()
+        binding.dday.textSize = prefs.textSize.toFloat()
         setDateFormat()
+        updateDday()
+
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_DATE_CHANGED)
+            addAction(Intent.ACTION_TIME_CHANGED)
+            addAction(Intent.ACTION_TIMEZONE_CHANGED)
+        }
+        requireContext().registerReceiver(dateChangeReceiver, filter)
+    }
+
+    override fun onStop() {
+        try { requireContext().unregisterReceiver(dateChangeReceiver) } catch (_: Exception) { }
+        super.onStop()
+    }
+
+    private fun updateDday() {
+        val label = DDay.label(prefs)
+        binding.dday.text = label
+        binding.dday.visibility = if (label.isEmpty()) View.GONE else View.VISIBLE
     }
 
     // date is shown as month, day, weekday
@@ -135,6 +165,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 if (isOlauncherDefault(requireContext())) View.GONE else View.VISIBLE
         }
         updateWeather()
+        updateDday()
     }
 
     override fun onClick(view: View) {

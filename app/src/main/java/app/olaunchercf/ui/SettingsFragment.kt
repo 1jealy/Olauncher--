@@ -3,6 +3,7 @@ package app.olaunchercf.ui
 import SettingsTheme
 import android.Manifest
 import android.app.Activity
+import android.app.DatePickerDialog
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
@@ -15,6 +16,8 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ScrollView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -23,7 +26,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Text
+import androidx.appcompat.app.AlertDialog
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -58,6 +63,8 @@ import app.olaunchercf.ui.compose.SettingsComposable.SettingsToggle
 import app.olaunchercf.ui.compose.SettingsComposable.SettingsTopView
 import app.olaunchercf.ui.compose.SettingsComposable.SettingsTwoButtonRow
 import app.olaunchercf.ui.compose.SettingsComposable.SimpleTextButton
+
+import java.util.Calendar
 
 class SettingsFragment : Fragment() {
 
@@ -278,6 +285,15 @@ class SettingsFragment : Fragment() {
                             onChange = onChange,
                             state = remember { mutableStateOf(prefs.showWeather) }
                         ) { toggleShowWeather() }
+                    },
+                    { _, _ ->
+                        val dday = remember { mutableStateOf(DDay.label(prefs)) }
+                        SettingsAppSelector(
+                            title = stringResource(R.string.dday),
+                            currentSelection = dday,
+                            active = dday.value.isNotEmpty(),
+                            onClick = { pickDday(dday) },
+                        )
                     },
                     { _, onChange ->
                         SettingsToggle(
@@ -524,6 +540,51 @@ class SettingsFragment : Fragment() {
             showToastLong(requireContext(), getString(R.string.accessibility_required))
             openAccessibilitySettings(requireContext())
         }
+    }
+
+    // pick a date, then a name; the name dialog can also turn the D-day off
+    private fun pickDday(state: MutableState<String>) {
+        val current = DDay.parse(prefs.ddayDate) ?: Calendar.getInstance()
+        DatePickerDialog(
+            requireContext(),
+            { _, year, month, day ->
+                askDdayTitle(DDay.format(year, month, day), state)
+            },
+            current.get(Calendar.YEAR),
+            current.get(Calendar.MONTH),
+            current.get(Calendar.DAY_OF_MONTH),
+        ).apply {
+            if (prefs.ddayDate.isNotEmpty()) {
+                setButton(DatePickerDialog.BUTTON_NEUTRAL, getString(R.string.dday_remove)) { _, _ ->
+                    prefs.ddayDate = ""
+                    prefs.ddayTitle = ""
+                    state.value = ""
+                }
+            }
+        }.show()
+    }
+
+    private fun askDdayTitle(date: String, state: MutableState<String>) {
+        val input = EditText(requireContext()).apply {
+            setText(prefs.ddayTitle)
+            hint = getString(R.string.dday_title_hint)
+            setSingleLine()
+        }
+        val container = FrameLayout(requireContext()).apply {
+            val padding = dp2px(resources, 20)
+            setPadding(padding, padding / 2, padding, 0)
+            addView(input)
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.dday_title)
+            .setView(container)
+            .setPositiveButton(R.string.save) { _, _ ->
+                prefs.ddayDate = date
+                prefs.ddayTitle = input.text.toString().trim()
+                state.value = DDay.label(prefs)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun toggleShowWeather() {

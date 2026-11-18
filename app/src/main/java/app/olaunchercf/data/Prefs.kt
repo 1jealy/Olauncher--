@@ -61,6 +61,8 @@ private const val DELAYED_APPS = "DELAYED_APPS"
 private const val SLEEP_OTHER_APPS = "SLEEP_OTHER_APPS"
 private const val USAGE_ALERT_MINUTES = "USAGE_ALERT_MINUTES"
 private const val SHOW_WEATHER = "SHOW_WEATHER"
+private const val DDAY_DATE = "DDAY_DATE"
+private const val DDAY_TITLE = "DDAY_TITLE"
 private const val WEATHER_TEXT = "WEATHER_TEXT"
 private const val WEATHER_UPDATED = "WEATHER_UPDATED"
 
@@ -298,6 +300,15 @@ class Prefs(val context: Context) {
     var usageAlertMinutes: Int
         get() = try { prefs.getInt(USAGE_ALERT_MINUTES, 0) } catch (_: Exception) { 0 }
         set(value) = prefs.edit().putInt(USAGE_ALERT_MINUTES, value).apply()
+
+    // D-day target date as yyyy-MM-dd; empty = off
+    var ddayDate: String
+        get() = prefs.getString(DDAY_DATE, "").toString()
+        set(value) = prefs.edit().putString(DDAY_DATE, value).apply()
+
+    var ddayTitle: String
+        get() = prefs.getString(DDAY_TITLE, "").toString()
+        set(value) = prefs.edit().putString(DDAY_TITLE, value).apply()
 
     var showWeather: Boolean
         get() = prefs.getBoolean(SHOW_WEATHER, false)
