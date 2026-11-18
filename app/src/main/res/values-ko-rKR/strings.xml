@@ -81,7 +81,7 @@
 
     <!-- Focus features -->
     <string name="focus">집중</string>
-    <string name="allowlist_mode">허용된 앱만 실행</string>
+    <string name="allowlist_mode">허용 외 앱 숨김·5초 대기</string>
     <string name="allowed_apps">허용 앱 선택</string>
     <string name="sleep_other_apps">허용 외 앱 절전</string>
     <string name="delayed_apps">5초 후 실행할 앱</string>

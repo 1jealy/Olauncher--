@@ -102,7 +102,7 @@
 
     <!-- Focus features -->
     <string name="focus">Focus</string>
-    <string name="allowlist_mode">Only allowed apps</string>
+    <string name="allowlist_mode">Hide other apps and wait 5s</string>
     <string name="allowed_apps">Allowed apps</string>
     <string name="sleep_other_apps">Sleep apps that are not allowed</string>
     <string name="delayed_apps">Apps opened after 5s</string>

@@ -23,6 +23,7 @@ import app.olaunchercf.data.Constants
 import app.olaunchercf.data.Constants.value
 import app.olaunchercf.data.Prefs
 import app.olaunchercf.databinding.ActivityMainBinding
+import app.olaunchercf.helper.LaunchGate
 import app.olaunchercf.helper.isTablet
 import app.olaunchercf.helper.showToastLong
 import java.io.BufferedReader
@@ -124,6 +125,11 @@ class MainActivity : AppCompatActivity() {
         }
         viewModel.showMessageDialog.observe(this) {
             showMessage(it)
+        }
+        LaunchGate.countdownRequest.observe(this) { packageName ->
+            if (packageName == null) return@observe
+            LaunchGate.countdownRequest.value = null
+            viewModel.requestCountdown(packageName)
         }
         viewModel.delayedLaunch.observe(this) { appModel ->
             if (appModel == null) hideLaunchDelay() else showLaunchDelay(appModel)

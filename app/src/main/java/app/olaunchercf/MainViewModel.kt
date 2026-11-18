@@ -60,13 +60,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun Set<String>.toggle(item: String): Set<String> =
         if (contains(item)) this - item else this + item
 
-    // checks the allow list and the launch delay before opening an app
+    // apps that are not allowed, and the selected delayed apps, open after a countdown
     private fun requestLaunch(appModel: AppModel) {
-        if (!prefs.isAppAllowed(appModel.appPackage)) {
-            showToastShort(appContext, appContext.getString(R.string.app_blocked))
-            return
-        }
-        if (prefs.delayedApps.contains(appModel.appPackage)) {
+        if (!prefs.isAppAllowed(appModel.appPackage) || prefs.delayedApps.contains(appModel.appPackage)) {
             delayedLaunch.value = appModel
             return
         }
@@ -76,7 +72,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // called when the launch delay countdown is over
     fun launchDelayedApp(appModel: AppModel) {
         delayedLaunch.value = null
+        LaunchGate.passedPackage = appModel.appPackage
         launchApp(appModel)
+    }
+
+    // countdown for an app that was opened outside the launcher
+    fun requestCountdown(packageName: String) {
+        if (delayedLaunch.value?.appPackage == packageName) return
+        val launcher = appContext.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+        val user = android.os.Process.myUserHandle()
+        val activity = launcher.getActivityList(packageName, user).firstOrNull() ?: return
+        delayedLaunch.value = AppModel(
+            appLabel = activity.label.toString(),
+            key = null,
+            appPackage = packageName,
+            appActivityName = activity.componentName.className,
+            user = user,
+            appAlias = prefs.getAppAlias(packageName),
+        )
     }
 
     fun cancelDelayedLaunch() {
