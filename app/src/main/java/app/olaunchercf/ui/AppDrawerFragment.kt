@@ -104,7 +104,12 @@ class AppDrawerFragment : Fragment() {
         binding.recyclerView.adapter = appAdapter
         binding.recyclerView.addOnScrollListener(getRecyclerViewOnScrollListener())
 
-        if (flag == AppDrawerFlag.HiddenApps) binding.search.queryHint = getString(R.string.hidden_apps)
+        when (flag) {
+            AppDrawerFlag.HiddenApps -> binding.search.queryHint = getString(R.string.hidden_apps)
+            AppDrawerFlag.AllowedApps -> binding.search.queryHint = getString(R.string.allowed_apps)
+            AppDrawerFlag.DelayedApps -> binding.search.queryHint = getString(R.string.delayed_apps)
+            else -> {}
+        }
         binding.search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 appAdapter.launchFirstInList()
@@ -124,7 +129,6 @@ class AppDrawerFragment : Fragment() {
         viewModel.hiddenApps.observe(viewLifecycleOwner, Observer {
             if (flag != AppDrawerFlag.HiddenApps) return@Observer
             it?.let { appList ->
-                binding.listEmptyHint.visibility = if (appList.isEmpty()) View.VISIBLE else View.GONE
                 populateAppList(appList, appAdapter)
             }
         })
@@ -133,7 +137,6 @@ class AppDrawerFragment : Fragment() {
             if (flag == AppDrawerFlag.HiddenApps) return@Observer
             if (it == appAdapter.appsList) return@Observer
             it?.let { appList ->
-                binding.listEmptyHint.visibility = if (appList.isEmpty()) View.VISIBLE else View.GONE
                 populateAppList(appList, appAdapter)
             }
         })
@@ -167,7 +170,15 @@ class AppDrawerFragment : Fragment() {
         }, 100)
     }
 
-    private fun populateAppList(apps: List<AppModel>, appAdapter: AppDrawerAdapter) {
+    private fun populateAppList(allApps: List<AppModel>, appAdapter: AppDrawerAdapter) {
+        // in allowlist mode the app drawer only shows the allowed apps
+        val prefs = Prefs(requireContext())
+        val apps = if (appAdapter.flag == AppDrawerFlag.LaunchApp && prefs.allowlistMode) {
+            val allowed = prefs.allowedApps
+            allApps.filter { allowed.contains(it.appPackage) }
+        } else allApps
+        binding.listEmptyHint.visibility = if (apps.isEmpty()) View.VISIBLE else View.GONE
+
         val animation = AnimationUtils.loadLayoutAnimation(requireContext(), R.anim.layout_anim_from_bottom)
         binding.recyclerView.layoutAnimation = animation
         appAdapter.setAppList(apps.toMutableList())
@@ -176,7 +187,9 @@ class AppDrawerFragment : Fragment() {
     private fun appClickListener(viewModel: MainViewModel, flag: AppDrawerFlag, n: Int = 0): (appModel: AppModel) -> Unit =
         { appModel ->
             viewModel.selectedApp(appModel, flag, n)
-            if (flag == AppDrawerFlag.LaunchApp || flag == AppDrawerFlag.HiddenApps)
+            if (flag == AppDrawerFlag.AllowedApps || flag == AppDrawerFlag.DelayedApps)
+                Unit // multi-select: stay in the list, the adapter refreshes the check mark
+            else if (flag == AppDrawerFlag.LaunchApp || flag == AppDrawerFlag.HiddenApps)
                 findNavController().popBackStack(R.id.mainFragment, false)
             else
                 findNavController().popBackStack()

@@ -32,12 +32,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val clockAlignment = MutableLiveData(prefs.clockAlignment)
     val homeAppsAlignment = MutableLiveData(Pair(prefs.homeAlignment, prefs.homeAlignmentBottom))
     val homeAppsCount = MutableLiveData(prefs.homeAppsNum)
+    val showWeather = MutableLiveData(prefs.showWeather)
+
+    // app that should be opened after the launch delay countdown
+    val delayedLaunch = MutableLiveData<AppModel?>()
 
     fun selectedApp(appModel: AppModel, flag: AppDrawerFlag, n: Int = 0) {
         when (flag) {
             AppDrawerFlag.LaunchApp, AppDrawerFlag.HiddenApps -> {
-                launchApp(appModel)
+                requestLaunch(appModel)
             }
+            AppDrawerFlag.AllowedApps -> prefs.allowedApps = prefs.allowedApps.toggle(appModel.appPackage)
+            AppDrawerFlag.DelayedApps -> prefs.delayedApps = prefs.delayedApps.toggle(appModel.appPackage)
             AppDrawerFlag.SetHomeApp -> {
                 prefs.setHomeAppModel(n, appModel)
             }
@@ -49,6 +55,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             AppDrawerFlag.SetClickDate -> prefs.appClickDate = appModel
             AppDrawerFlag.SetDoubleTap -> prefs.appDoubleTap = appModel
         }
+    }
+
+    private fun Set<String>.toggle(item: String): Set<String> =
+        if (contains(item)) this - item else this + item
+
+    // checks the allow list and the launch delay before opening an app
+    private fun requestLaunch(appModel: AppModel) {
+        if (!prefs.isAppAllowed(appModel.appPackage)) {
+            showToastShort(appContext, appContext.getString(R.string.app_blocked))
+            return
+        }
+        if (prefs.delayedApps.contains(appModel.appPackage)) {
+            delayedLaunch.value = appModel
+            return
+        }
+        launchApp(appModel)
+    }
+
+    // called when the launch delay countdown is over
+    fun launchDelayedApp(appModel: AppModel) {
+        delayedLaunch.value = null
+        launchApp(appModel)
+    }
+
+    fun cancelDelayedLaunch() {
+        delayedLaunch.value = null
+    }
+
+    fun setShowWeather(visibility: Boolean) {
+        showWeather.value = visibility
     }
 
     fun setShowDate(visibility: Boolean) {

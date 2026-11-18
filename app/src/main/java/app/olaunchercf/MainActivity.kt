@@ -7,6 +7,8 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.view.View
@@ -16,6 +18,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavController
 import androidx.navigation.Navigation
+import app.olaunchercf.data.AppModel
 import app.olaunchercf.data.Constants
 import app.olaunchercf.data.Constants.value
 import app.olaunchercf.data.Prefs
@@ -34,7 +37,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var viewModel: MainViewModel
     private lateinit var binding: ActivityMainBinding
 
+    private val countdownHandler = Handler(Looper.getMainLooper())
+    private var countdownRunnable: Runnable? = null
+
     override fun onBackPressed() {
+        if (binding.launchDelayLayout.visibility == View.VISIBLE) {
+            viewModel.cancelDelayedLaunch()
+            return
+        }
         if (navController.currentDestination?.id != R.id.mainFragment)
             super.onBackPressed()
     }
@@ -77,6 +87,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
+        // leaving the launcher cancels a pending delayed launch
+        if (::viewModel.isInitialized && viewModel.delayedLaunch.value != null) viewModel.cancelDelayedLaunch()
         backToHomeScreen()
         super.onStop()
     }
@@ -101,6 +113,9 @@ class MainActivity : AppCompatActivity() {
             binding.messageLayout.visibility = View.GONE
             viewModel.showMessageDialog("")
         }
+        binding.launchDelayCancel.setOnClickListener {
+            viewModel.cancelDelayedLaunch()
+        }
     }
 
     private fun initObservers(viewModel: MainViewModel) {
@@ -110,6 +125,38 @@ class MainActivity : AppCompatActivity() {
         viewModel.showMessageDialog.observe(this) {
             showMessage(it)
         }
+        viewModel.delayedLaunch.observe(this) { appModel ->
+            if (appModel == null) hideLaunchDelay() else showLaunchDelay(appModel)
+        }
+    }
+
+    private fun showLaunchDelay(appModel: AppModel) {
+        countdownRunnable?.let { countdownHandler.removeCallbacks(it) }
+
+        binding.launchDelayApp.text = appModel.appAlias.ifEmpty { appModel.appLabel }
+        binding.launchDelayLayout.visibility = View.VISIBLE
+
+        var secondsLeft = Constants.LAUNCH_DELAY_SECONDS
+        val runnable = object : Runnable {
+            override fun run() {
+                if (secondsLeft <= 0) {
+                    hideLaunchDelay()
+                    viewModel.launchDelayedApp(appModel)
+                    return
+                }
+                binding.launchDelayCount.text = secondsLeft.toString()
+                secondsLeft--
+                countdownHandler.postDelayed(this, 1000)
+            }
+        }
+        countdownRunnable = runnable
+        runnable.run()
+    }
+
+    private fun hideLaunchDelay() {
+        countdownRunnable?.let { countdownHandler.removeCallbacks(it) }
+        countdownRunnable = null
+        binding.launchDelayLayout.visibility = View.GONE
     }
 
     @SuppressLint("SourceLockedOrientationActivity")

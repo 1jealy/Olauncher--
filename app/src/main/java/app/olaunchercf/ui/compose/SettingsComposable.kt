@@ -1,10 +1,8 @@
 package app.olaunchercf.ui.compose
 
 import SettingsTheme
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -17,15 +15,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterStart
-import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -76,20 +71,8 @@ object SettingsComposable {
     }
 
     @Composable
-    fun SettingsTopView(title: String, onClick: () -> Unit = {}, fontSize: TextUnit = TextUnit.Unspecified, iconSize: Dp = 16.dp, content: @Composable () -> Unit) {
+    fun SettingsTopView(content: @Composable () -> Unit) {
         SettingsTile {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                SettingsTitle(
-                    text = title,
-                    fontSize = fontSize,
-                    modifier = Modifier.align(CenterStart)
-                )
-                Image(
-                    painterResource(R.drawable.ic_outline_info_24),
-                    contentDescription = "",
-                    modifier = Modifier.size(iconSize).align(TopEnd).clickable { onClick() },
-                )
-            }
             content()
         }
     }

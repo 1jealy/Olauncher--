@@ -55,6 +55,14 @@ private const val DOUBLE_TAP = "DOUBLE_TAP"
 
 private const val TEXT_SIZE = "text_size"
 
+private const val ALLOWLIST_MODE = "ALLOWLIST_MODE"
+private const val ALLOWED_APPS = "ALLOWED_APPS"
+private const val DELAYED_APPS = "DELAYED_APPS"
+private const val USAGE_ALERT_MINUTES = "USAGE_ALERT_MINUTES"
+private const val SHOW_WEATHER = "SHOW_WEATHER"
+private const val WEATHER_TEXT = "WEATHER_TEXT"
+private const val WEATHER_UPDATED = "WEATHER_UPDATED"
+
 class Prefs(val context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_FILENAME, 0)
@@ -261,6 +269,42 @@ class Prefs(val context: Context) {
     var hiddenAppsUpdated: Boolean
         get() = prefs.getBoolean(HIDDEN_APPS_UPDATED, false)
         set(value) = prefs.edit().putBoolean(HIDDEN_APPS_UPDATED, value).apply()
+
+    // Allowlist mode: when on, only apps in [allowedApps] can be opened
+    var allowlistMode: Boolean
+        get() = prefs.getBoolean(ALLOWLIST_MODE, false)
+        set(value) = prefs.edit().putBoolean(ALLOWLIST_MODE, value).apply()
+
+    // package names of apps that may be opened while allowlist mode is on
+    var allowedApps: Set<String>
+        get() = prefs.getStringSet(ALLOWED_APPS, emptySet())?.toSet() ?: emptySet()
+        set(value) = prefs.edit().putStringSet(ALLOWED_APPS, value.toSet()).apply()
+
+    // package names of apps that open only after a 5 second wait
+    var delayedApps: Set<String>
+        get() = prefs.getStringSet(DELAYED_APPS, emptySet())?.toSet() ?: emptySet()
+        set(value) = prefs.edit().putStringSet(DELAYED_APPS, value.toSet()).apply()
+
+    fun isAppAllowed(packageName: String): Boolean =
+        !allowlistMode || allowedApps.contains(packageName)
+
+    // continuous usage after which a notification is sent; 0 = off
+    var usageAlertMinutes: Int
+        get() = try { prefs.getInt(USAGE_ALERT_MINUTES, 0) } catch (_: Exception) { 0 }
+        set(value) = prefs.edit().putInt(USAGE_ALERT_MINUTES, value).apply()
+
+    var showWeather: Boolean
+        get() = prefs.getBoolean(SHOW_WEATHER, false)
+        set(value) = prefs.edit().putBoolean(SHOW_WEATHER, value).apply()
+
+    var weatherText: String
+        get() = prefs.getString(WEATHER_TEXT, "").toString()
+        set(value) = prefs.edit().putString(WEATHER_TEXT, value).apply()
+
+    // stored as minutes since epoch, because backups store every number as int
+    var weatherUpdatedMinutes: Int
+        get() = try { prefs.getInt(WEATHER_UPDATED, 0) } catch (_: Exception) { 0 }
+        set(value) = prefs.edit().putInt(WEATHER_UPDATED, value).apply()
 
     fun getHomeAppModel(i:Int): AppModel {
         return loadApp("$i")

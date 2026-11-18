@@ -24,7 +24,7 @@ import java.text.Normalizer
 
 
 class AppDrawerAdapter(
-    private var flag: AppDrawerFlag,
+    val flag: AppDrawerFlag,
     private val gravity: Int,
     private val clickListener: (AppModel) -> Unit,
     private val appInfoListener: (AppModel) -> Unit,
@@ -53,7 +53,18 @@ class AppDrawerAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         if (appFilteredList.size == 0) return
         val appModel = appFilteredList[holder.absoluteAdapterPosition]
-        holder.bind(flag, gravity, appModel, clickListener, appInfoListener)
+        val checked = when (flag) {
+            AppDrawerFlag.AllowedApps -> prefs.allowedApps.contains(appModel.appPackage)
+            AppDrawerFlag.DelayedApps -> prefs.delayedApps.contains(appModel.appPackage)
+            else -> null
+        }
+        holder.bind(flag, gravity, appModel, clickListener, appInfoListener, checked)
+        if (checked != null) {
+            holder.itemView.findViewById<View>(R.id.appTitleFrame).setOnClickListener {
+                clickListener(appModel)
+                notifyItemChanged(holder.absoluteAdapterPosition)
+            }
+        }
 
         holder.appHideButton.setOnClickListener {
             appFilteredList.removeAt(holder.absoluteAdapterPosition)
@@ -161,7 +172,8 @@ class AppDrawerAdapter(
             appLabelGravity: Int,
             appModel: AppModel,
             listener: (AppModel) -> Unit,
-            appInfoListener: (AppModel) -> Unit
+            appInfoListener: (AppModel) -> Unit,
+            checked: Boolean? = null,
         ) =
             with(itemView) {
                 appHideLayout.visibility = View.GONE
@@ -198,7 +210,9 @@ class AppDrawerAdapter(
                     appModel.appLabel
                 }
 
-                appTitle.text = appName
+                // selection lists (allowed / delayed apps) mark the selected apps
+                appTitle.text = if (checked == true) "✓ $appName" else appName
+                appTitle.alpha = if (checked == false) 0.5f else 1f
 
                 // set current name as default text in EditText
                 appRenameEdit.text = Editable.Factory.getInstance().newEditable(appName)

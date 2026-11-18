@@ -40,11 +40,23 @@
             style="@style/TextDefault"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:format12Hour="EEE, dd MMM"
-            android:format24Hour="EEE, dd MMM"
+            android:format12Hour="MMM d, EEE"
+            android:format24Hour="MMM d, EEE"
             android:paddingHorizontal="2dp"
             android:textSize="@dimen/date_size"
-            tools:text="Thu, 30 Dec" />
+            tools:text="Dec 30, Thu" />
+
+        <TextView
+            android:id="@+id/weather"
+            style="@style/TextDefault"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:paddingHorizontal="2dp"
+            android:textSize="@dimen/date_size"
+            android:visibility="gone"
+            tools:text="Clear 12°"
+            tools:visibility="visible" />
     </LinearLayout>
 
     <!-- Home apps-->

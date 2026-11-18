@@ -1,11 +1,13 @@
 package app.olaunchercf.ui
 
 import SettingsTheme
+import android.Manifest
 import android.app.Activity
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -14,6 +16,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ScrollView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -31,11 +34,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
-import app.olaunchercf.BuildConfig
 import app.olaunchercf.MainViewModel
 import app.olaunchercf.R
 import app.olaunchercf.data.Constants
@@ -46,6 +49,7 @@ import app.olaunchercf.data.Prefs
 import app.olaunchercf.databinding.FragmentSettingsBinding
 import app.olaunchercf.helper.*
 import app.olaunchercf.listener.DeviceAdmin
+import app.olaunchercf.ui.compose.SettingsComposable.SettingsAppSelector
 import app.olaunchercf.ui.compose.SettingsComposable.SettingsArea
 import app.olaunchercf.ui.compose.SettingsComposable.SettingsGestureItem
 import app.olaunchercf.ui.compose.SettingsComposable.SettingsItem
@@ -66,6 +70,14 @@ class SettingsFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val offset = 5
+
+    private val locationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (!granted) showToastLong(requireContext(), getString(R.string.weather_no_permission))
+    }
+
+    private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (!granted) showToastLong(requireContext(), getString(R.string.notification_permission_needed))
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -114,10 +126,7 @@ class SettingsFragment : Fragment() {
         }
 
         Column {
-            SettingsTopView(
-                stringResource(R.string.app_name),
-                onClick = { openAppInfo(requireContext(), android.os.Process.myUserHandle(), BuildConfig.APPLICATION_ID) },
-            ) {
+            SettingsTopView {
                 SimpleTextButton(stringResource(R.string.hidden_apps) ) {
                     showHiddenApps()
                 }
@@ -125,6 +134,45 @@ class SettingsFragment : Fragment() {
                     resetDefaultLauncher(requireContext())
                 }
             }
+            SettingsArea(
+                title = stringResource(R.string.focus),
+                selected = selected,
+                items = arrayOf(
+                    { _, onChange ->
+                        SettingsToggle(
+                            title = stringResource(R.string.allowlist_mode),
+                            onChange = onChange,
+                            state = remember { mutableStateOf(prefs.allowlistMode) },
+                        ) { toggleAllowlistMode() }
+                    },
+                    { _, _ ->
+                        SettingsAppSelector(
+                            title = stringResource(R.string.allowed_apps),
+                            currentSelection = remember { mutableStateOf(prefs.allowedApps.size.toString()) },
+                            active = true,
+                            onClick = { selectApps(AppDrawerFlag.AllowedApps) },
+                        )
+                    },
+                    { _, _ ->
+                        SettingsAppSelector(
+                            title = stringResource(R.string.delayed_apps),
+                            currentSelection = remember { mutableStateOf(prefs.delayedApps.size.toString()) },
+                            active = true,
+                            onClick = { selectApps(AppDrawerFlag.DelayedApps) },
+                        )
+                    },
+                    { open, onChange ->
+                        SettingsItem(
+                            title = stringResource(R.string.usage_alert),
+                            open = open,
+                            onChange = onChange,
+                            currentSelection = remember { mutableStateOf(Constants.UsageAlert.fromMinutes(prefs.usageAlertMinutes)) },
+                            values = Constants.UsageAlert.values(),
+                            onSelect = { alert -> setUsageAlert(alert) }
+                        )
+                    },
+                )
+            )
             SettingsArea(
                 title = stringResource(R.string.appearance),
                 selected = selected,
@@ -216,6 +264,13 @@ class SettingsFragment : Fragment() {
                             onChange = onChange,
                             state = remember { mutableStateOf(prefs.showDate) }
                         ) { toggleShowDate() }
+                    },
+                    { _, onChange ->
+                        SettingsToggle(
+                            title = stringResource(R.string.show_weather),
+                            onChange = onChange,
+                            state = remember { mutableStateOf(prefs.showWeather) }
+                        ) { toggleShowWeather() }
                     },
                     { _, onChange ->
                         SettingsToggle(
@@ -364,15 +419,6 @@ class SettingsFragment : Fragment() {
                 )
             )
 
-            // version number
-            Text(
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(10.dp, 5.dp),
-                text = "Version: ${requireContext().packageManager.getPackageInfo(requireContext().packageName, 0).versionName}",
-
-                color = Color.DarkGray
-            )
         }
     }
 
@@ -428,6 +474,53 @@ class SettingsFragment : Fragment() {
         viewModel.setShowTime(prefs.showTime)
     }
 
+    private fun toggleAllowlistMode() {
+        prefs.allowlistMode = !prefs.allowlistMode
+        if (prefs.allowlistMode) {
+            if (prefs.allowedApps.isEmpty()) showToastLong(requireContext(), getString(R.string.allowlist_empty_hint))
+            requireAccessibilityService()
+        }
+    }
+
+    private fun selectApps(flag: AppDrawerFlag) {
+        viewModel.getAppList(showHiddenApps = true)
+        findNavController().navigate(
+            R.id.action_settingsFragment_to_appListFragment,
+            bundleOf("flag" to flag.toString())
+        )
+    }
+
+    private fun setUsageAlert(alert: Constants.UsageAlert) {
+        prefs.usageAlertMinutes = alert.minutes
+        if (alert != Constants.UsageAlert.Off) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            requireAccessibilityService()
+        }
+        ActionService.instance()?.restartUsageTimer()
+    }
+
+    // blocking apps and usage alerts run in the accessibility service
+    private fun requireAccessibilityService() {
+        if (ActionService.instance() == null) {
+            showToastLong(requireContext(), getString(R.string.accessibility_required))
+            openAccessibilitySettings(requireContext())
+        }
+    }
+
+    private fun toggleShowWeather() {
+        prefs.showWeather = !prefs.showWeather
+        viewModel.setShowWeather(prefs.showWeather)
+        if (prefs.showWeather) {
+            prefs.weatherUpdatedMinutes = 0 // refresh as soon as the home screen is shown
+            if (!Weather.hasLocationPermission(requireContext()))
+                locationPermission.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+        }
+    }
+
     private fun showHiddenApps() {
         viewModel.getHiddenApps()
         findNavController().navigate(
@@ -480,6 +573,8 @@ class SettingsFragment : Fragment() {
             AppDrawerFlag.SetClickDate -> prefs.clickDateAction = action
             AppDrawerFlag.SetDoubleTap -> prefs.doubleTapAction = action
             AppDrawerFlag.SetHomeApp,
+                AppDrawerFlag.AllowedApps,
+                AppDrawerFlag.DelayedApps,
                 AppDrawerFlag.HiddenApps,
                 AppDrawerFlag.LaunchApp -> {}
         }

@@ -52,7 +52,7 @@
     <string name="system_default">시스템 기본값</string>
     <string name="dark">어두움</string>
     <string name="light">밝음</string>
-    <string name="accessibility_service_description">두 번 탭하여 잠금 기능은 접근성 권한을 필요로 합니다. 획득한 어떠한 데이터도 당신의 단말기에서 외부로 나가지 않습니다.</string>
+    <string name="accessibility_service_description">이 접근성 서비스는 화면 잠금, 최근 앱 열기, 허용되지 않은 앱 차단, 사용 시간 알림에 사용됩니다. 어떤 데이터도 기기 밖으로 전송되지 않습니다.</string>
     <string name="open">링크 열기</string>
     <string name="copy">복사</string>
     <string name="close">닫기</string>
@@ -64,7 +64,7 @@
     <string name="auto_open_apps">Auto open apps</string>
     <string name="show">Show</string>
     <string name="reset">Reset</string>
-    <string name="cancel">Cancel</string>
+    <string name="cancel">취소</string>
     <string name="enable">Enable</string>
     <string name="disable">Disable</string>
     <string name="enabled">Enabled</string>
@@ -78,4 +78,31 @@
     <string name="backup">Backup</string>
     <string name="load_backup">Load Backup</string>
     <string name="store_backup">Store Backup</string>
+
+    <!-- Focus features -->
+    <string name="focus">집중</string>
+    <string name="allowlist_mode">허용된 앱만 실행</string>
+    <string name="allowed_apps">허용 앱 선택</string>
+    <string name="delayed_apps">5초 후 실행할 앱</string>
+    <string name="app_blocked">허용되지 않은 앱입니다</string>
+    <string name="allowlist_empty_hint">아직 허용된 앱이 없습니다. \'허용 앱 선택\'에서 골라주세요.</string>
+    <string name="accessibility_required">런처 밖에서도 동작하도록 OlauncherCF 접근성 서비스를 켜주세요.</string>
+    <string name="usage_alert">사용 시간 알림</string>
+    <string name="minutes_format">%d분</string>
+    <string name="usage_alert_channel">사용 시간 알림</string>
+    <string name="usage_alert_title">잠시 쉬어갈 시간이에요</string>
+    <string name="usage_alert_message">휴대폰을 %d분 동안 사용했어요.</string>
+    <string name="notification_permission_needed">사용 시간 알림을 받으려면 알림을 허용해주세요.</string>
+    <string name="show_weather">날씨 보여주기</string>
+    <string name="weather_loading">날씨 불러오는 중…</string>
+    <string name="weather_unavailable">날씨 정보 없음</string>
+    <string name="weather_no_permission">날씨를 보려면 위치 권한을 허용해주세요.</string>
+    <string name="weather_clear">맑음</string>
+    <string name="weather_partly_cloudy">구름 조금</string>
+    <string name="weather_cloudy">흐림</string>
+    <string name="weather_fog">안개</string>
+    <string name="weather_drizzle">이슬비</string>
+    <string name="weather_rain">비</string>
+    <string name="weather_snow">눈</string>
+    <string name="weather_thunderstorm">뇌우</string>
 </resources>

@@ -36,6 +36,11 @@ object Constants {
     const val BACKUP_WRITE = 1
     const val BACKUP_READ = 2
 
+    const val LAUNCH_DELAY_SECONDS = 5
+    const val WEATHER_REFRESH_MINUTES = 30
+    const val REQUEST_CODE_LOCATION = 700
+    const val REQUEST_CODE_NOTIFICATIONS = 701
+
     enum class AppDrawerFlag {
         LaunchApp,
         HiddenApps,
@@ -47,6 +52,8 @@ object Constants {
         SetClickClock,
         SetClickDate,
         SetDoubleTap,
+        AllowedApps,
+        DelayedApps,
     }
 
     enum class Language: EnumOption {
@@ -176,6 +183,26 @@ object Constants {
                 ShowRecents -> stringResource(R.string.show_recents)
                 Disabled -> stringResource(R.string.disabled)
             }
+        }
+    }
+
+    enum class UsageAlert(val minutes: Int): EnumOption {
+        Off(0),
+        Min15(15),
+        Min30(30),
+        Min45(45),
+        Min60(60),
+        Min90(90),
+        Min120(120);
+
+        @Composable
+        override fun string(): String {
+            return if (this == Off) stringResource(R.string.off)
+            else stringResource(R.string.minutes_format, minutes)
+        }
+
+        companion object {
+            fun fromMinutes(minutes: Int): UsageAlert = values().firstOrNull { it.minutes == minutes } ?: Off
         }
     }
 

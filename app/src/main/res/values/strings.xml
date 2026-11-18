@@ -66,7 +66,7 @@
     <string name="light">Light</string>
     <string name="double_tap_lock_uninstall_message">Double tap to lock enabled.
         \n\nNote: Turn this OFF first if you decide to delete Olauncher.</string>
-    <string name="accessibility_service_description">This accessibility service allows OlauncherCF to do certain actions such as locking the screen or opening the quick settings.</string>
+    <string name="accessibility_service_description">This accessibility service allows OlauncherCF to lock the screen, open the recent apps, block apps that are not allowed and send usage time alerts. No data leaves your device.</string>
     <string name="open">Open link</string>
     <string name="copy">Copy</string>
     <string name="close">Close</string>
@@ -99,4 +99,31 @@
     <string name="load_backup">Load Backup</string>
     <string name="store_backup">Store Backup</string>
 
+
+    <!-- Focus features -->
+    <string name="focus">Focus</string>
+    <string name="allowlist_mode">Only allowed apps</string>
+    <string name="allowed_apps">Allowed apps</string>
+    <string name="delayed_apps">Apps opened after 5s</string>
+    <string name="app_blocked">This app is not allowed</string>
+    <string name="allowlist_empty_hint">No apps are allowed yet. Choose them under \'Allowed apps\'.</string>
+    <string name="accessibility_required">Turn on the OlauncherCF accessibility service so this also works outside the launcher.</string>
+    <string name="usage_alert">Usage alert</string>
+    <string name="minutes_format">%d min</string>
+    <string name="usage_alert_channel">Usage alerts</string>
+    <string name="usage_alert_title">Time for a break</string>
+    <string name="usage_alert_message">You have been using your phone for %d minutes.</string>
+    <string name="notification_permission_needed">Allow notifications to get usage alerts.</string>
+    <string name="show_weather">Show weather</string>
+    <string name="weather_loading">Loading weather…</string>
+    <string name="weather_unavailable">Weather unavailable</string>
+    <string name="weather_no_permission">Allow location access to show the weather.</string>
+    <string name="weather_clear">Clear</string>
+    <string name="weather_partly_cloudy">Partly cloudy</string>
+    <string name="weather_cloudy">Cloudy</string>
+    <string name="weather_fog">Fog</string>
+    <string name="weather_drizzle">Drizzle</string>
+    <string name="weather_rain">Rain</string>
+    <string name="weather_snow">Snow</string>
+    <string name="weather_thunderstorm">Thunderstorm</string>
 </resources>

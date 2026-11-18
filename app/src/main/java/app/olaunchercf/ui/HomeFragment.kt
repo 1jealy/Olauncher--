@@ -29,6 +29,7 @@ import app.olaunchercf.helper.*
 import app.olaunchercf.listener.OnSwipeTouchListener
 import app.olaunchercf.listener.ViewSwipeTouchListener
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 
 class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener {
@@ -40,6 +41,8 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
+
+    private var weatherLoading = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
@@ -78,7 +81,49 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
         binding.clock.textSize = prefs.textSize * 2.5f
         binding.date.textSize = prefs.textSize.toFloat()
+        binding.weather.textSize = prefs.textSize.toFloat()
+        setDateFormat()
+    }
 
+    // date is shown as month, day, weekday
+    private fun setDateFormat() {
+        @Suppress("DEPRECATION")
+        val language = resources.configuration.locale?.language ?: Locale.getDefault().language
+        val pattern = if (language == "ko") "M월 d일 EEEE" else "MMM d, EEE"
+        binding.date.format12Hour = pattern
+        binding.date.format24Hour = pattern
+    }
+
+    private fun updateWeather(force: Boolean = false) {
+        if (!prefs.showWeather) return
+        val context = requireContext().applicationContext
+
+        binding.weather.text = prefs.weatherText.ifEmpty { getString(R.string.weather_loading) }
+        if (!force && !Weather.isStale(prefs)) return
+        if (weatherLoading) return
+
+        if (!Weather.hasLocationPermission(context)) {
+            binding.weather.text = getString(R.string.weather_no_permission)
+            return
+        }
+
+        weatherLoading = true
+        Weather.requestLocation(context) { location ->
+            if (location == null) {
+                weatherLoading = false
+                if (prefs.weatherText.isEmpty()) _binding?.weather?.text = context.getString(R.string.weather_unavailable)
+                return@requestLocation
+            }
+            lifecycleScope.launch {
+                val text = Weather.fetch(context, location.latitude, location.longitude)
+                weatherLoading = false
+                if (text != null) {
+                    prefs.weatherText = text
+                    prefs.weatherUpdatedMinutes = Weather.nowMinutes()
+                }
+                _binding?.weather?.text = prefs.weatherText.ifEmpty { context.getString(R.string.weather_unavailable) }
+            }
+        }
     }
 
     override fun onResume() {
@@ -89,6 +134,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             binding.setDefaultLauncher.visibility =
                 if (isOlauncherDefault(requireContext())) View.GONE else View.VISIBLE
         }
+        updateWeather()
     }
 
     override fun onClick(view: View) {
@@ -106,6 +152,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 }
             }
             R.id.setDefaultLauncher -> viewModel.resetDefaultLauncherApp(requireContext())
+            R.id.weather -> updateWeather(force = true)
             else -> {
                 try { // Launch app
                     val appLocation = view.id.toString().toInt()
@@ -135,6 +182,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         binding.clock.setOnClickListener(this)
         binding.date.setOnClickListener(this)
         binding.setDefaultLauncher.setOnClickListener(this)
+        binding.weather.setOnClickListener(this)
     }
 
     private fun initObservers() {
@@ -158,6 +206,10 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             }
             showDate.observe(viewLifecycleOwner) {
                 binding.date.visibility = if (it) View.VISIBLE else View.GONE
+            }
+            showWeather.observe(viewLifecycleOwner) {
+                binding.weather.visibility = if (it) View.VISIBLE else View.GONE
+                if (it) updateWeather()
             }
         }
     }
