@@ -104,6 +104,7 @@
     <string name="focus">Focus</string>
     <string name="allowlist_mode">Only allowed apps</string>
     <string name="allowed_apps">Allowed apps</string>
+    <string name="sleep_other_apps">Sleep apps that are not allowed</string>
     <string name="delayed_apps">Apps opened after 5s</string>
     <string name="app_blocked">This app is not allowed</string>
     <string name="allowlist_empty_hint">No apps are allowed yet. Choose them under \'Allowed apps\'.</string>

@@ -1,6 +1,7 @@
 package app.olaunchercf.helper
 
 import android.accessibilityservice.AccessibilityService
+import android.app.ActivityManager
 import android.app.KeyguardManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -8,10 +9,12 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.LauncherApps
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.Process
 import android.os.SystemClock
 import android.provider.Settings
 import android.telecom.TelecomManager
@@ -22,12 +25,14 @@ import androidx.core.app.NotificationManagerCompat
 import app.olaunchercf.R
 import app.olaunchercf.data.Prefs
 import java.lang.ref.WeakReference
+import java.util.concurrent.Executors
 
 /**
  * Accessibility service used for
  *  - locking the screen / showing recents (gestures)
  *  - blocking every app that is not on the allow list (allowlist mode)
  *  - sending a notification after a set time of continuous phone use
+ *  - stopping the background processes of apps that are not allowed
  */
 class ActionService : AccessibilityService() {
 
@@ -36,11 +41,15 @@ class ActionService : AccessibilityService() {
     private var usageStart = 0L
     private var lastBlockToast = 0L
     private var receiverRegistered = false
+    private val sleepExecutor = Executors.newSingleThreadExecutor()
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
-                Intent.ACTION_SCREEN_OFF -> stopUsageTimer()
+                Intent.ACTION_SCREEN_OFF -> {
+                    stopUsageTimer()
+                    sleepNotAllowedApps()
+                }
                 Intent.ACTION_USER_PRESENT -> startUsageTimer()
                 Intent.ACTION_SCREEN_ON -> if (!isKeyguardLocked()) startUsageTimer()
             }
@@ -105,6 +114,10 @@ class ActionService : AccessibilityService() {
 
         // the app is not allowed: go back to the launcher
         performGlobalAction(GLOBAL_ACTION_HOME)
+        if (prefs.sleepOtherApps) {
+            // once the app is in the background it can be stopped
+            handler.postDelayed({ sleepApp(pkg) }, 1500)
+        }
         val now = SystemClock.elapsedRealtime()
         if (now - lastBlockToast > 2000) {
             lastBlockToast = now
@@ -128,6 +141,34 @@ class ActionService : AccessibilityService() {
 
         // system components without a launcher icon (permission dialogs, share sheets, ...)
         return packageManager.getLaunchIntentForPackage(pkg) == null
+    }
+
+    // ---------- sleep apps that are not allowed ----------
+
+    // Regular apps cannot force-stop other apps, but they may stop their background processes.
+    // Apps the user is looking at and running foreground services (music, navigation) are not affected.
+    private fun sleepNotAllowedApps() {
+        if (!prefs.sleepOtherApps) return
+        val allowed = prefs.allowedApps
+        if (allowed.isEmpty()) return
+
+        sleepExecutor.execute {
+            try {
+                val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+                launcherApps.getActivityList(null, Process.myUserHandle())
+                    .map { it.applicationInfo.packageName }
+                    .toSet()
+                    .filter { !allowed.contains(it) && !isExempt(it) }
+                    .forEach { sleepApp(it) }
+            } catch (_: Exception) { }
+        }
+    }
+
+    private fun sleepApp(pkg: String) {
+        try {
+            val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            activityManager.killBackgroundProcesses(pkg)
+        } catch (_: Exception) { }
     }
 
     // ---------- usage alert ----------

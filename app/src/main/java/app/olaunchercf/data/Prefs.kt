@@ -58,6 +58,7 @@ private const val TEXT_SIZE = "text_size"
 private const val ALLOWLIST_MODE = "ALLOWLIST_MODE"
 private const val ALLOWED_APPS = "ALLOWED_APPS"
 private const val DELAYED_APPS = "DELAYED_APPS"
+private const val SLEEP_OTHER_APPS = "SLEEP_OTHER_APPS"
 private const val USAGE_ALERT_MINUTES = "USAGE_ALERT_MINUTES"
 private const val SHOW_WEATHER = "SHOW_WEATHER"
 private const val WEATHER_TEXT = "WEATHER_TEXT"
@@ -284,6 +285,11 @@ class Prefs(val context: Context) {
     var delayedApps: Set<String>
         get() = prefs.getStringSet(DELAYED_APPS, emptySet())?.toSet() ?: emptySet()
         set(value) = prefs.edit().putStringSet(DELAYED_APPS, value.toSet()).apply()
+
+    // stop the background processes of apps that are not on the allow list
+    var sleepOtherApps: Boolean
+        get() = prefs.getBoolean(SLEEP_OTHER_APPS, false)
+        set(value) = prefs.edit().putBoolean(SLEEP_OTHER_APPS, value).apply()
 
     fun isAppAllowed(packageName: String): Boolean =
         !allowlistMode || allowedApps.contains(packageName)

@@ -83,6 +83,7 @@
     <string name="focus">집중</string>
     <string name="allowlist_mode">허용된 앱만 실행</string>
     <string name="allowed_apps">허용 앱 선택</string>
+    <string name="sleep_other_apps">허용 외 앱 절전</string>
     <string name="delayed_apps">5초 후 실행할 앱</string>
     <string name="app_blocked">허용되지 않은 앱입니다</string>
     <string name="allowlist_empty_hint">아직 허용된 앱이 없습니다. \'허용 앱 선택\'에서 골라주세요.</string>

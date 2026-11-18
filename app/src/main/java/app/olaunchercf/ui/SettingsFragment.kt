@@ -153,6 +153,13 @@ class SettingsFragment : Fragment() {
                             onClick = { selectApps(AppDrawerFlag.AllowedApps) },
                         )
                     },
+                    { _, onChange ->
+                        SettingsToggle(
+                            title = stringResource(R.string.sleep_other_apps),
+                            onChange = onChange,
+                            state = remember { mutableStateOf(prefs.sleepOtherApps) },
+                        ) { toggleSleepOtherApps() }
+                    },
                     { _, _ ->
                         SettingsAppSelector(
                             title = stringResource(R.string.delayed_apps),
@@ -477,6 +484,14 @@ class SettingsFragment : Fragment() {
     private fun toggleAllowlistMode() {
         prefs.allowlistMode = !prefs.allowlistMode
         if (prefs.allowlistMode) {
+            if (prefs.allowedApps.isEmpty()) showToastLong(requireContext(), getString(R.string.allowlist_empty_hint))
+            requireAccessibilityService()
+        }
+    }
+
+    private fun toggleSleepOtherApps() {
+        prefs.sleepOtherApps = !prefs.sleepOtherApps
+        if (prefs.sleepOtherApps) {
             if (prefs.allowedApps.isEmpty()) showToastLong(requireContext(), getString(R.string.allowlist_empty_hint))
             requireAccessibilityService()
         }
