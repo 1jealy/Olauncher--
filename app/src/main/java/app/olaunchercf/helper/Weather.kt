@@ -23,7 +23,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import java.security.cert.CertificateException
+import javax.net.ssl.SSLException
 import java.net.URL
 import java.net.URLEncoder
 import java.util.*
@@ -73,9 +78,7 @@ object Weather {
                 )
             }
         }
-        val text = fetch(context, coordinates.first, coordinates.second)
-            ?: return Result.Failure(R.string.weather_network_error)
-        return Result.Success(text)
+        return fetch(context, coordinates.first, coordinates.second)
     }
 
     private fun parseCoordinates(value: String): Pair<Double, Double>? {
@@ -191,41 +194,123 @@ object Weather {
 
     // ---------- weather ----------
 
-    /** Returns e.g. "Clear 12°", or null if the request failed. */
-    private suspend fun fetch(context: Context, latitude: Double, longitude: Double): String? =
+    private class WeatherNow(val temperature: Double, @StringRes val description: Int)
+
+    // tried in order, so one blocked server does not break the weather
+    private val providers: List<(Double, Double) -> WeatherNow> = listOf(
+        ::fromOpenMeteo,
+        ::fromMetNorway,
+        ::fromWttr,
+    )
+
+    /** Returns e.g. "Clear 12°", or a failure that says why no server could be reached. */
+    private suspend fun fetch(context: Context, latitude: Double, longitude: Double): Result =
         withContext(Dispatchers.IO) {
-            try {
-                // two decimals (~1 km) is plenty for weather and keeps the location coarse
-                val url = URL(
-                    String.format(
-                        Locale.US,
-                        "https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f&current=temperature_2m,weather_code",
-                        latitude, longitude
+            var lastError: Exception? = null
+            for (provider in providers) {
+                try {
+                    val now = provider(latitude, longitude)
+                    return@withContext Result.Success(
+                        "${context.getString(now.description)} ${now.temperature.roundToInt()}°"
                     )
-                )
-                val current = JSONObject(httpGet(url)).getJSONObject("current")
-                val temperature = current.getDouble("temperature_2m").roundToInt()
-                val code = current.getInt("weather_code")
-                "${context.getString(describe(code))} $temperature°"
-            } catch (_: Exception) {
-                null
+                } catch (e: Exception) {
+                    lastError = e
+                }
             }
+            Result.Failure(errorMessage(lastError))
         }
+
+    @StringRes
+    private fun errorMessage(error: Exception?): Int = when (error) {
+        is UnknownHostException -> R.string.weather_error_dns
+        is SSLException, is CertificateException -> R.string.weather_error_ssl
+        is SocketTimeoutException -> R.string.weather_error_timeout
+        else -> R.string.weather_network_error
+    }
+
+    // coordinates are rounded to two decimals (~1 km): plenty for weather, keeps the location coarse
+    private fun coords(format: String, latitude: Double, longitude: Double): String =
+        String.format(Locale.US, format, latitude, longitude)
+
+    private fun fromOpenMeteo(latitude: Double, longitude: Double): WeatherNow {
+        val url = coords(
+            "https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f&current=temperature_2m,weather_code",
+            latitude, longitude
+        )
+        val current = JSONObject(httpGet(url)).getJSONObject("current")
+        return WeatherNow(current.getDouble("temperature_2m"), describeWmo(current.getInt("weather_code")))
+    }
+
+    private fun fromMetNorway(latitude: Double, longitude: Double): WeatherNow {
+        val url = coords(
+            "https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=%.2f&lon=%.2f",
+            latitude, longitude
+        )
+        val data = JSONObject(httpGet(url)).getJSONObject("properties")
+            .getJSONArray("timeseries").getJSONObject(0).getJSONObject("data")
+        val temperature = data.getJSONObject("instant").getJSONObject("details").getDouble("air_temperature")
+        val symbol = data.optJSONObject("next_1_hours")?.optJSONObject("summary")?.optString("symbol_code")
+            ?: data.optJSONObject("next_6_hours")?.optJSONObject("summary")?.optString("symbol_code")
+            ?: ""
+        return WeatherNow(temperature, describeMetSymbol(symbol))
+    }
+
+    private fun fromWttr(latitude: Double, longitude: Double): WeatherNow {
+        val url = coords("https://wttr.in/%.2f,%.2f?format=j1", latitude, longitude)
+        val current = JSONObject(httpGet(url)).getJSONArray("current_condition").getJSONObject(0)
+        return WeatherNow(current.getString("temp_C").toDouble(), describeWwo(current.getString("weatherCode").toInt()))
+    }
+
+    private fun httpGet(address: String): String = httpGet(URL(address))
 
     private fun httpGet(url: URL): String {
         val connection = url.openConnection() as HttpURLConnection
         try {
-            connection.connectTimeout = 10_000
-            connection.readTimeout = 10_000
+            connection.connectTimeout = 8_000
+            connection.readTimeout = 8_000
+            // MET Norway requires an identifying User-Agent
+            connection.setRequestProperty("User-Agent", "OlauncherCF-weather/1.0 (+https://github.com/1jealy/Olauncher--)")
+            connection.setRequestProperty("Accept", "application/json")
+            val code = connection.responseCode
+            if (code !in 200..299) throw IOException("HTTP $code")
             return connection.inputStream.bufferedReader().use { it.readText() }
         } finally {
             connection.disconnect()
         }
     }
 
+    // MET Norway symbol codes, e.g. "lightrainshowers_day"
+    @StringRes
+    private fun describeMetSymbol(symbol: String): Int {
+        val name = symbol.substringBefore('_')
+        return when {
+            "thunder" in name -> R.string.weather_thunderstorm
+            "snow" in name || "sleet" in name -> R.string.weather_snow
+            "rain" in name -> R.string.weather_rain
+            name == "fog" -> R.string.weather_fog
+            name == "clearsky" -> R.string.weather_clear
+            name == "fair" || name == "partlycloudy" -> R.string.weather_partly_cloudy
+            else -> R.string.weather_cloudy
+        }
+    }
+
+    // World Weather Online codes used by wttr.in
+    @StringRes
+    private fun describeWwo(code: Int): Int = when (code) {
+        113 -> R.string.weather_clear
+        116 -> R.string.weather_partly_cloudy
+        143, 248, 260 -> R.string.weather_fog
+        263, 266, 281, 284 -> R.string.weather_drizzle
+        200, 386, 389, 392, 395 -> R.string.weather_thunderstorm
+        176, 293, 296, 299, 302, 305, 308, 311, 314, 353, 356, 359 -> R.string.weather_rain
+        179, 182, 185, 227, 230, 317, 320, 323, 326, 329, 332, 335, 338,
+        350, 362, 365, 368, 371, 374, 377 -> R.string.weather_snow
+        else -> R.string.weather_cloudy
+    }
+
     // WMO weather interpretation codes
     @StringRes
-    private fun describe(code: Int): Int = when (code) {
+    private fun describeWmo(code: Int): Int = when (code) {
         0 -> R.string.weather_clear
         1, 2 -> R.string.weather_partly_cloudy
         3 -> R.string.weather_cloudy

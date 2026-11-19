@@ -117,4 +117,7 @@
     <string name="weather_no_location">위치를 찾을 수 없어요. 설정에서 날씨 지역을 입력해주세요.</string>
     <string name="weather_location_off">위치가 꺼져 있어요. 위치를 켜거나 날씨 지역을 입력해주세요.</string>
     <string name="weather_network_error">날씨 서버에 연결할 수 없어요. 인터넷을 확인해주세요.</string>
+    <string name="weather_error_dns">이 네트워크에서 날씨 서버가 차단돼 있어요(DNS). 모바일 데이터로 해보거나 비공개 DNS·광고 차단을 꺼주세요.</string>
+    <string name="weather_error_ssl">이 네트워크가 날씨 서버 보안 연결을 막고 있어요(학교·회사 Wi-Fi?). 모바일 데이터로 해보세요.</string>
+    <string name="weather_error_timeout">날씨 서버 응답이 늦어요. 눌러서 다시 시도해주세요.</string>
 </resources>

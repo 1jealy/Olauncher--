@@ -138,4 +138,7 @@
     <string name="weather_no_location">Can\'t find your location. Set a weather location in settings.</string>
     <string name="weather_location_off">Location is off. Turn it on or set a weather location.</string>
     <string name="weather_network_error">Can\'t reach the weather server. Check your internet.</string>
+    <string name="weather_error_dns">Weather servers are blocked on this network (DNS). Try mobile data or turn off Private DNS / ad blocking.</string>
+    <string name="weather_error_ssl">This network blocks secure connections to weather servers (school or office Wi-Fi?). Try mobile data.</string>
+    <string name="weather_error_timeout">Weather servers did not answer in time. Tap to try again.</string>
 </resources>
