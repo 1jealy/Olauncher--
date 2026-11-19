@@ -132,26 +132,22 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         if (!force && !Weather.isStale(prefs)) return
         if (weatherLoading) return
 
-        if (!Weather.hasLocationPermission(context)) {
-            binding.weather.text = getString(R.string.weather_no_permission)
-            return
-        }
-
         weatherLoading = true
-        Weather.requestLocation(context) { location ->
-            if (location == null) {
-                weatherLoading = false
-                if (prefs.weatherText.isEmpty()) _binding?.weather?.text = context.getString(R.string.weather_unavailable)
-                return@requestLocation
-            }
-            lifecycleScope.launch {
-                val text = Weather.fetch(context, location.latitude, location.longitude)
-                weatherLoading = false
-                if (text != null) {
-                    prefs.weatherText = text
+        lifecycleScope.launch {
+            val result = Weather.load(context, prefs)
+            weatherLoading = false
+            when (result) {
+                is Weather.Result.Success -> {
+                    prefs.weatherText = result.text
                     prefs.weatherUpdatedMinutes = Weather.nowMinutes()
+                    _binding?.weather?.text = result.text
                 }
-                _binding?.weather?.text = prefs.weatherText.ifEmpty { context.getString(R.string.weather_unavailable) }
+                is Weather.Result.Failure -> {
+                    // keep showing the last weather if there is one, otherwise say what went wrong
+                    val message = context.getString(result.message)
+                    if (prefs.weatherText.isEmpty()) _binding?.weather?.text = message
+                    else if (force) showToastShort(context, message)
+                }
             }
         }
     }

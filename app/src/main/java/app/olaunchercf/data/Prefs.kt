@@ -65,6 +65,8 @@ private const val DDAY_DATE = "DDAY_DATE"
 private const val DDAY_TITLE = "DDAY_TITLE"
 private const val WEATHER_TEXT = "WEATHER_TEXT"
 private const val WEATHER_UPDATED = "WEATHER_UPDATED"
+private const val WEATHER_CITY = "WEATHER_CITY"
+private const val WEATHER_LAST_LOCATION = "WEATHER_LAST_LOCATION"
 
 class Prefs(val context: Context) {
 
@@ -317,6 +319,16 @@ class Prefs(val context: Context) {
     var weatherText: String
         get() = prefs.getString(WEATHER_TEXT, "").toString()
         set(value) = prefs.edit().putString(WEATHER_TEXT, value).apply()
+
+    // place name typed by the user; empty = use the device location
+    var weatherCity: String
+        get() = prefs.getString(WEATHER_CITY, "").toString()
+        set(value) = prefs.edit().putString(WEATHER_CITY, value).apply()
+
+    // "lat,lon" of the last device location that worked (a string so backups keep the decimals)
+    var weatherLastLocation: String
+        get() = prefs.getString(WEATHER_LAST_LOCATION, "").toString()
+        set(value) = prefs.edit().putString(WEATHER_LAST_LOCATION, value).apply()
 
     // stored as minutes since epoch, because backups store every number as int
     var weatherUpdatedMinutes: Int

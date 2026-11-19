@@ -287,6 +287,16 @@ class SettingsFragment : Fragment() {
                         ) { toggleShowWeather() }
                     },
                     { _, _ ->
+                        val city = remember { mutableStateOf(prefs.weatherCity) }
+                        val label = city.value.ifEmpty { stringResource(R.string.weather_current_location) }
+                        SettingsAppSelector(
+                            title = stringResource(R.string.weather_city),
+                            currentSelection = mutableStateOf(label),
+                            active = prefs.showWeather,
+                            onClick = { askWeatherCity(city) },
+                        )
+                    },
+                    { _, _ ->
                         val dday = remember { mutableStateOf(DDay.label(prefs)) }
                         SettingsAppSelector(
                             title = stringResource(R.string.dday),
@@ -587,12 +597,39 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
+    // empty = use the device location
+    private fun askWeatherCity(state: MutableState<String>) {
+        val input = EditText(requireContext()).apply {
+            setText(prefs.weatherCity)
+            hint = getString(R.string.weather_city_hint)
+            setSingleLine()
+        }
+        val container = FrameLayout(requireContext()).apply {
+            val padding = dp2px(resources, 20)
+            setPadding(padding, padding / 2, padding, 0)
+            addView(input)
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.weather_city)
+            .setView(container)
+            .setPositiveButton(R.string.save) { _, _ ->
+                prefs.weatherCity = input.text.toString().trim()
+                prefs.weatherText = ""
+                prefs.weatherUpdatedMinutes = 0
+                state.value = prefs.weatherCity
+                if (prefs.weatherCity.isEmpty() && !Weather.hasLocationPermission(requireContext()))
+                    locationPermission.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     private fun toggleShowWeather() {
         prefs.showWeather = !prefs.showWeather
         viewModel.setShowWeather(prefs.showWeather)
         if (prefs.showWeather) {
             prefs.weatherUpdatedMinutes = 0 // refresh as soon as the home screen is shown
-            if (!Weather.hasLocationPermission(requireContext()))
+            if (prefs.weatherCity.isEmpty() && !Weather.hasLocationPermission(requireContext()))
                 locationPermission.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
         }
     }
